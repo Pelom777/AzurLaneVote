@@ -1,15 +1,10 @@
 $(function () {
-    var names;
     var chartDom = document.getElementById('echarts');
     var myChart = echarts.init(chartDom);
-    var option = 0;
-    var data;
-    var currentOption;
-    const updateFrequency = 1000;
-    const columnOption = {
+    const option = {
         title: {
-            text: '碧蓝航线实时投票排行榜',
-            subtext: '数据每分钟刷新',
+            text: '碧蓝航线2021人气投票全纪实',
+            subtext: '倍速：×3600',
             left: 'center',
         },
         grid: {
@@ -32,7 +27,7 @@ $(function () {
                 show: true,
                 fontSize: 14
             },
-            animationDuration: 300,
+            animationDuration: 0,
             animationDurationUpdate: 300
         },
         series: [
@@ -50,70 +45,51 @@ $(function () {
                 }
             }
         ],
-        animationDuration: updateFrequency,
-        animationDurationUpdate: updateFrequency,
+        animationDuration: 1000,
+        animationDurationUpdate: 1000,
         animationEasing: 'linear',
-        animationEasingUpdate: 'linear'
-    };
-    const pieOption = {
-        title: {
-            text: '碧蓝航线实时投票排行榜',
-            subtext: '数据每分钟刷新',
-            left: 'center'
-        },
-        tooltip: {
-            trigger: 'item'
-        },
-        legend: {
-            type: 'scroll',
-            orient: 'vertical',
-            left: 160,
-            top: 40,
-            bottom: 20,
-        },
-        dataset: [
-            {}
-        ],
-        series: [
-            {
-                type: 'pie',
-                radius: [50, 250],
-                itemStyle: {
-                    borderRadius: 4,
-                    borderColor: '#fff',
-                    borderWidth: 1
+        animationEasingUpdate: 'linear',
+        graphic: {
+            elements: [
+                {
+                    type: 'text',
+                    right: 160,
+                    bottom: 60,
+                    style: {
+                        font: 'bolder 80px monospace',
+                        fill: 'rgba(100, 100, 100, 0.25)'
+                    },
+                    z: 100
                 }
-            }
-        ]
-    }
-    const options = [columnOption, pieOption];
-
+            ]
+        }
+    };
     $.when(
-        $.getJSON('./data/names.json')
-    ).done(function (res) {
-        names = res;
-
-        currentOption = options[option];
-        load();
-    });
-
-    function load() {
-        $.when(
-            $.getJSON('./data/info.json')
-        ).done(function (res) {
-            var len = res.length;
-            for (var i = 0; i < len; i++) {
-                res[i][0] = names[res[i][0]];
+        $.getJSON('./data/names.json'),
+        $.getJSON('./data/vote.json')
+    ).done(function (res0, res1) {
+        const names = res0[0];
+        const data = res1[0];
+        const times = [];
+        for (let i = 0; i < data.length; i++) {
+            data[i][0] = names[data[i][0]];
+            if (times.length === 0 || times[times.length - 1] !== data[i][2]) {
+                times.push(data[i][2]);
             }
-            data = res;
-            currentOption.dataset[0].source = data;
-            myChart.setOption(currentOption);
-        })
-    }
-
-    setInterval(function () {
-        load();
-    }, 60000);
+        }
+        for (let i = 0; i < times.length; i++) {
+            (function (i) {
+                setTimeout(function () {
+                    let source = data.filter(function (d) {
+                        return d[2] === times[i];
+                    })
+                    option.dataset[0].source = source;
+                    option.graphic.elements[0].style.text = times[i].replace(' ', '\n');
+                    myChart.setOption(option);
+                }, i * 1000);
+            })(i);
+        }
+    });
 
     $('#share').on('click', function () {
         var input = $('<input>').attr('value', window.location.href).attr('readonly', 'readonly');
@@ -121,12 +97,6 @@ $(function () {
         input.select();
         document.execCommand('copy');
         input.remove();
-    })
-
-    $('#switch').on('click', function(){
-        currentOption = options[(option += 1) % 2];
-        currentOption.dataset[0].source = data;
-        myChart.setOption(currentOption);
     })
 
 })
